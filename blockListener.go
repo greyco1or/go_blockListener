@@ -42,7 +42,7 @@ func BlockListener() error {
 			//블록에 포함된 트랜잭션 개수
 			fmt.Println("Total Transaction : ", len(block.Transactions()))
 			fmt.Println("####################Block Header#########################")
-			//baseFee := block.BaseFee()
+			baseFee := block.BaseFee()
 
 			if len(block.Uncles()) > 0 {
 				for _, uncle := range block.Uncles() {
@@ -65,14 +65,35 @@ func BlockListener() error {
 					fmt.Println("To Address: ", tx.To())
 				} else {
 					fmt.Println(("To Address : Contract Creation"))
+					contractAddress := GetContractAddress(client, tx.Hash())
+					fmt.Println("Contract Address : ", contractAddress)
 				}
 				fmt.Println("Transfer Value(wei) : " + tx.Value().String())
 				fmt.Println("Transaction nonce : ", tx.Nonce())
 				fmt.Println("Transaction Gas Limit : ", tx.Gas()) //예상 Gas Limit
+
+				realGasLimit := GetRealGasUsed(client, tx.Hash())
+				fmt.Println("Transaction Real Gas Limit : ", realGasLimit)
 				fmt.Println("Transaction GasFeeCap : ", tx.GasFeeCap().Uint64())
 				fmt.Println("Transaction GasTipCap : ", tx.GasTipCap().Uint64())
+				realGasPrice := GetRealGasPrice(baseFee.Uint64(), tx.GasFeeCap().Uint64(), tx.GasTipCap().Uint64())
+				fmt.Println("Transaction RealGasPrice : ", realGasPrice)
 				fmt.Println("Transaction Input Data : ", hex.EncodeToString(tx.Data()))
 				fmt.Println("*******************Transaction Info****************************")
+
+				//data가 있으면 컨트랙트의 함수를 호출하는 경우가 대부분
+				if len(tx.Data()) != 0 {
+					to, value := ERC20Transaction(hex.EncodeToString(tx.Data()))
+					if to != "" {
+						symbol, name, decimal := GetContractInfo(client, tx.To())
+						fmt.Println("ERC20 Contract Address : ", tx.To().Hex())
+						fmt.Println("ERC20 Contract Name : ", name)
+						fmt.Println("ERC20 Contract Symbol : ", symbol)
+						fmt.Println("ERC20 Contract Decimal : ", decimal)
+						fmt.Println("ERC20 Transfer To Address : ", to)
+						fmt.Println("ERC20 Transfer To Value : ", value) //value를 10**decimal로 나누어야한다.
+					}
+				}
 			}
 
 		}
